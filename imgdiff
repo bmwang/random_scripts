@@ -12,8 +12,8 @@ if __name__ == "__main__":
 
   img1_n = sys.argv[1]
   img2_n = sys.argv[2]
-  img1_n_base, img1_n_ext = os.path.splitext(img1_n)
-  out_img_n = img1_n_base+".diff"+img1_n_ext
+  img1_split_n_ext = os.path.splitext(img1_n)
+  out_img_n = "%s.diff%s" % img1_split_n_ext
   if len(sys.argv) > 3:
     out_img_n = sys.argv[3]
 
@@ -35,11 +35,19 @@ if __name__ == "__main__":
   stud_pix = stud_img.load()
 
   # Difference them
-  for i in range(ref_size[0]):
-      for j in range(ref_size[1]):
-          diff_pix[i,j] = (abs(ref_pix[i,j][0] - stud_pix[i,j][0]),
-                  abs(ref_pix[i,j][1] - stud_pix[i,j][1]),
-                  abs(ref_pix[i,j][2] - stud_pix[i,j][2]))
+  total_diff = 0
+  for i in xrange(ref_size[0]):
+    for j in xrange(ref_size[1]):
+      diff_pix[i,j] = (abs(ref_pix[i,j][0] - stud_pix[i,j][0]),
+          abs(ref_pix[i,j][1] - stud_pix[i,j][1]),
+          abs(ref_pix[i,j][2] - stud_pix[i,j][2]))
+      total_diff += diff_pix[i,j][0] + diff_pix[i,j][1] + diff_pix[i,j][2]
+
+  avg_diff = total_diff/(255.*ref_size[0]*ref_size[1])
+  print "Difference: %s%%" % (avg_diff*100.)
+
+  if total_diff == 0:
+    print "These images are exactly the same."
 
   # Save it
   diff_img.save(out_img_n)
