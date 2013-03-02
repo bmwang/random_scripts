@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+from PIL import Image
+import sys
+import os
+
+
+if __name__ == "__main__":
+  if len(sys.argv) < 3:
+    print "usage: imgdiff img1 img2 [diff_img_name]"
+    sys.exit()
+
+  img1_n = sys.argv[1]
+  img2_n = sys.argv[2]
+  img1_n_base, img1_n_ext = os.path.splitext(img1_n)
+  out_img_n = img1_n_base+".diff"+img1_n_ext
+  if len(sys.argv) > 3:
+    out_img_n = sys.argv[3]
+
+  ref_img = Image.open(img1_n)
+  stud_img = Image.open(img2_n)
+
+  # Compare sizes
+  ref_size = ref_img.size
+  stud_size = stud_img.size
+  if ref_size != stud_size:
+      raise RuntimeError("Inconsistent image dimensions")
+
+  # Create new image
+  diff_img = Image.new(ref_img.mode, ref_size)
+
+  # Load pixel arrays
+  diff_pix = diff_img.load()
+  ref_pix = ref_img.load()
+  stud_pix = stud_img.load()
+
+  # Difference them
+  for i in range(ref_size[0]):
+      for j in range(ref_size[1]):
+          diff_pix[i,j] = (abs(ref_pix[i,j][0] - stud_pix[i,j][0]),
+                  abs(ref_pix[i,j][1] - stud_pix[i,j][1]),
+                  abs(ref_pix[i,j][2] - stud_pix[i,j][2]))
+
+  # Save it
+  diff_img.save(out_img_n)
+
+
