@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+# Quick hacky way to SOCKS proxy over SSH and set a network to follow it.
+
+import subprocess
+import os
+import sys
+import argparse
+import signal
+import atexit
+
+# Defaults
+host = 'brandonwang.net'
+socksPort = 8080
+netAdaptors = ['Ethernet Adaptor (en0)']
+
+
+# Argparse some stuff
+parser = argparse.ArgumentParser(
+  description='Make a SOCKS proxy over SSH for OSX')
+parser.add_argument('--user', dest='user')
+parser.add_argument('--host', dest='host', default=host)
+parser.add_argument('--port', dest='port', default=socksPort)
+parser.add_argument('--adaptors', dest='adaptors', nargs='+', 
+  default=netAdaptors)
+args = parser.parse_args()
+
+# Give ourself sudo if we don't have sudo
+# hacky but whatever who cares
+if os.getuid() != 0:
+  user = args.user
+  if args.user is None:
+    user = os.getlogin()
+  cmds = ['sudo', 'python', os.path.abspath(__file__), 
+    '--host', str(args.host),
+    '--port', str(args.port),
+    '--user', str(user),
+    '--adaptors']
+  cmds.extend(args.adaptors)
+  subprocess.Popen(cmds).communicate()
+  sys.exit(0)
+
+# Turn off the proxy when the script is over
+def closeConnections():
+  for adaptor in args.adaptors:
+    subprocess.Popen(['networksetup', '-setsocksfirewallproxystate',
+      adaptor, 'off'])
+  print 'SOCKS proxy off.'
+def gracefullyExit(signum, stackframe):
+  raise SystemExit
+for sig in (signal.SIGABRT, signal.SIGILL, signal.SIGINT,
+  signal.SIGSEGV, signal.SIGTERM):
+    signal.signal(sig, gracefullyExit)
+atexit.register(closeConnections)
+
+# Set the proxy settings for each adaptor
+for adaptor in args.adaptors:
+  subprocess.Popen(
+    ['networksetup', '-setsocksfirewallproxy', adaptor, 'localhost', 
+      str(socksPort)]).communicate()
+  subprocess.Popen(
+    ['networksetup', '-setsocksfirewallproxystate', adaptor, 'on']
+      ).communicate()
+
+# If we're running as some user, prepend sudo -u (to follow user's ssh config)
+prefixCmds = []
+if args.user is not None:
+  prefixCmds = ['sudo', '-u', args.user]
+cmds = prefixCmds
+cmds.extend(['ssh', '-N', '-C', '-D', str(args.port), args.host])
+
+# Run SSH
+print 'Tunneling...'
+subprocess.Popen(cmds).communicate()
+
