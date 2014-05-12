@@ -44,7 +44,7 @@ if os.getuid() != 0:
 def closeConnections():
   for adaptor in args.adaptors:
     subprocess.Popen(['networksetup', '-setsocksfirewallproxystate',
-      adaptor, 'off'])
+      adaptor, 'off']).communicate()
   print 'SOCKS proxy off.'
 def gracefullyExit(signum, stackframe):
   raise SystemExit
